@@ -1,0 +1,23 @@
+import core
+
+# --- Secrets Detection Rail ---
+flow check secrets in output
+  """Block responses that contain credentials or secrets."""
+  $has_secrets = execute check_output_secrets(bot_message=$bot_message)
+  if $has_secrets
+    bot replace with safe response
+    stop
+
+flow bot replace with safe response
+  bot say "I generated a response that may have contained sensitive information (credentials, API keys, or connection strings). This has been blocked for security. Let me provide the information without sensitive details."
+
+# --- DDL Statement Rail ---
+flow check ddl in output
+  """Block responses containing DDL/DML statements."""
+  $has_ddl = execute check_ddl_statements(bot_message=$bot_message)
+  if $has_ddl
+    bot refuse ddl output
+    stop
+
+flow bot refuse ddl output
+  bot say "I was about to include database modification statements (CREATE, DROP, INSERT, DELETE, etc.) in my response. For safety, I've blocked this. I can only help with data queries, not schema modifications."

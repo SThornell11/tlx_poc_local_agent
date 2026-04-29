@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrustLogix POC Agent</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/config.js"></script>
+</head>
+<body>
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-logo">
+      <img src="/img/trustlogix-logo.svg" alt="TrustLogix" height="40">
+    </div>
+    <p>AI-powered chat governed by TrustLogix MCP gateway policies.<br>Sign in to query your data.</p>
+    <button class="btn-login" onclick="loginWith('entra')">Sign in with Microsoft</button>
+    <button class="btn-login btn-login-okta" onclick="loginWith('okta')">Sign in with Okta</button>
+  </div>
+
+  <!-- Chat Application -->
+  <div id="chat-app" class="chat-app">
+    <div class="chat-header">
+      <div class="title">
+        <img src="/img/trustlogix-logo-white.svg" alt="TrustLogix" height="22">
+        Agent Chat
+        <span id="customer-chip" class="customer-chip"></span>
+      </div>
+      <div class="user-info">
+        <span id="user-name"></span>
+        <span id="user-role" class="role-badge"></span>
+        <button class="btn-reset" onclick="resetConnection()">Reset</button>
+        <button class="btn-logout" onclick="logout()">Sign out</button>
+      </div>
+    </div>
+
+    <div class="chat-main">
+      <div class="chat-messages-area">
+        <div id="messages" class="messages-container"></div>
+        <div class="chat-input-area">
+          <div id="quick-prompts" class="quick-prompts">
+            <button class="quick-prompt" onclick="useQuickPrompt(this)" data-prompt="List 15 employees showing first name, last name, and email address.">HR Emails (masking)</button>
+            <button class="quick-prompt" onclick="useQuickPrompt(this)" data-prompt="Show 15 employees with their business unit, name, email, and salary.">Finance Employees (row access)</button>
+            <button class="quick-prompt" onclick="useQuickPrompt(this)" data-prompt="Show the distinct business units and a count of employees in each.">Business Units</button>
+            <button class="quick-prompt" onclick="useQuickPrompt(this)" data-prompt="Show 15 employees from the Sales business unit with their name, title, and salary.">Sales BU</button>
+            <button class="quick-prompt" onclick="useQuickPrompt(this)" data-prompt="Show 15 employees from the Engineering business unit with their name, title, and salary.">Engineering BU</button>
+            <button class="quick-prompt" onclick="useQuickPrompt(this)" data-prompt="What tools do you have available? List each tool name, what it does, and what parameters it accepts.">Gateway tools</button>
+          </div>
+          <div class="input-wrapper">
+            <textarea
+              id="chat-input"
+              class="chat-input"
+              placeholder="Ask about revenue, employees, business units, departments, customers..."
+              rows="1"
+              onkeydown="handleKeyDown(event)"
+            ></textarea>
+            <button id="btn-send" class="btn-send" onclick="sendMessage()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="activity-sidebar">
+        <div class="sidebar-header">
+          Agent Activity
+          <button class="toggle-btn" onclick="clearActivity()" title="Clear">&#x2715;</button>
+        </div>
+        <div id="activity-feed" class="activity-feed"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/chat.js"></script>
+</body>
+</html>

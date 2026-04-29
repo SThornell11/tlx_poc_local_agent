@@ -1,0 +1,200 @@
+name: poc_hr
+description: "POC HR analytics - employee demographics, PII, compensation, department analysis. Sensitive columns are masked per access tier."
+
+tables:
+  - name: employees
+    description: "Employee directory including PII fields. Masking policies apply per tier: Tier 1 sees raw data, Tier 2 sees partial masking, Tier 3 sees fully masked. Row access policy restricts rows by business unit."
+    base_table:
+      database: POC_DEMO
+      schema: HR
+      table: EMPLOYEES
+
+    dimensions:
+      - name: employee_id
+        description: "Unique employee identifier"
+        expr: EMPLOYEE_ID
+        data_type: NUMBER
+        unique: true
+
+      - name: first_name
+        synonyms: ["given name", "first"]
+        description: "Employee first name. MASKED: Tier 1 sees full name, Tier 2 sees first initial plus asterisks, Tier 3 sees all asterisks."
+        expr: FIRST_NAME
+        data_type: VARCHAR
+
+      - name: last_name
+        synonyms: ["surname", "family name", "last"]
+        description: "Employee last name. MASKED: same policy as first name."
+        expr: LAST_NAME
+        data_type: VARCHAR
+
+      - name: email
+        synonyms: ["email address", "e-mail", "work email"]
+        description: "Employee email address. MASKED: Tier 1 sees full email, Tier 2 sees first 2 chars plus domain, Tier 3 sees fully masked."
+        expr: EMAIL
+        data_type: VARCHAR
+
+      - name: phone
+        synonyms: ["phone number", "telephone", "mobile", "cell"]
+        description: "Employee phone number. MASKED: Tier 1 sees full number, Tier 2 sees last 4 digits only, Tier 3 sees fully masked."
+        expr: PHONE
+        data_type: VARCHAR
+
+      - name: ssn
+        synonyms: ["social security number", "social security", "SSN", "social"]
+        description: "Employee Social Security Number. MASKED: Tier 1 sees full SSN, Tier 2 sees XXX-XX plus last 4, Tier 3 sees all asterisks."
+        expr: SSN
+        data_type: VARCHAR
+
+      - name: job_title
+        synonyms: ["title", "role", "position", "job"]
+        description: "Employee job title"
+        expr: JOB_TITLE
+        data_type: VARCHAR
+
+      - name: department
+        synonyms: ["dept", "team", "org", "function"]
+        description: "Department within the organization"
+        expr: DEPARTMENT
+        data_type: VARCHAR
+        is_enum: true
+        sample_values:
+          - "Data Science"
+          - "Engineering"
+          - "Product"
+          - "Finance"
+          - "Human Resources"
+          - "Sales"
+          - "Infrastructure"
+          - "Security"
+          - "Legal"
+          - "Marketing"
+          - "IT Operations"
+          - "Quality"
+
+      - name: business_unit
+        synonyms: ["BU", "division", "segment"]
+        description: "Business unit. ROW ACCESS POLICY: Tier 2 sees only Engineering and Sales, Tier 3 sees only HR and Finance."
+        expr: BUSINESS_UNIT
+        data_type: VARCHAR
+        is_enum: true
+        sample_values:
+          - "Engineering"
+          - "Sales"
+          - "Finance"
+          - "HR"
+
+      - name: region
+        synonyms: ["geography", "geo", "location"]
+        description: "Geographic region"
+        expr: REGION
+        data_type: VARCHAR
+        is_enum: true
+        sample_values:
+          - "US-West"
+          - "US-East"
+          - "US-Central"
+
+      - name: status
+        synonyms: ["employment status", "active status"]
+        description: "Employment status"
+        expr: STATUS
+        data_type: VARCHAR
+        is_enum: true
+        sample_values:
+          - "ACTIVE"
+
+      - name: manager_id
+        synonyms: ["manager", "reports to", "supervisor"]
+        description: "Manager employee ID"
+        expr: MANAGER_ID
+        data_type: NUMBER
+
+    time_dimensions:
+      - name: date_of_birth
+        synonyms: ["DOB", "birthday", "birth date"]
+        description: "Employee date of birth. MASKED: Tier 1 sees full date, Tier 2 sees year only (Jan 1), Tier 3 sees NULL."
+        expr: DATE_OF_BIRTH
+        data_type: DATE
+
+      - name: hire_date
+        synonyms: ["start date", "date hired", "join date"]
+        description: "Date the employee was hired"
+        expr: HIRE_DATE
+        data_type: DATE
+
+    measures:
+      - name: annual_salary_usd
+        synonyms: ["salary", "compensation", "pay", "base salary", "annual salary"]
+        description: "Annual salary in USD. MASKED: Tier 1 sees exact value, Tier 2 sees rounded to nearest 1K, Tier 3 sees NULL."
+        expr: ANNUAL_SALARY_USD
+        data_type: NUMBER
+        default_aggregation: avg
+
+      - name: employee_count
+        synonyms: ["headcount", "count", "number of employees"]
+        description: "Number of employees"
+        expr: "1"
+        data_type: NUMBER
+        default_aggregation: count
+
+verified_queries:
+  - name: "employees_with_pii"
+    question: "List 5 employees with name, email, SSN, phone, and salary"
+    sql: |
+      SELECT FIRST_NAME, LAST_NAME, EMAIL, SSN, PHONE, DATE_OF_BIRTH, ANNUAL_SALARY_USD
+      FROM POC_DEMO.HR.EMPLOYEES
+      LIMIT 5
+
+  - name: "headcount_by_business_unit"
+    question: "How many employees are in each business unit?"
+    sql: |
+      SELECT BUSINESS_UNIT, COUNT(*) as headcount
+      FROM POC_DEMO.HR.EMPLOYEES
+      WHERE STATUS = 'ACTIVE'
+      GROUP BY BUSINESS_UNIT
+      ORDER BY headcount DESC
+
+  - name: "avg_salary_by_department"
+    question: "What is the average salary by department?"
+    sql: |
+      SELECT DEPARTMENT, AVG(ANNUAL_SALARY_USD) as avg_salary, COUNT(*) as headcount
+      FROM POC_DEMO.HR.EMPLOYEES
+      WHERE STATUS = 'ACTIVE'
+      GROUP BY DEPARTMENT
+      ORDER BY avg_salary DESC
+
+  - name: "employees_by_region"
+    question: "Show employee distribution by region"
+    sql: |
+      SELECT REGION, COUNT(*) as employee_count
+      FROM POC_DEMO.HR.EMPLOYEES
+      WHERE STATUS = 'ACTIVE'
+      GROUP BY REGION
+      ORDER BY employee_count DESC
+
+  - name: "employee_pii_lookup"
+    question: "Show me employee names, emails, phone numbers, and SSNs"
+    sql: |
+      SELECT EMPLOYEE_ID, FIRST_NAME, LAST_NAME, EMAIL, PHONE, SSN, DATE_OF_BIRTH
+      FROM POC_DEMO.HR.EMPLOYEES
+      WHERE STATUS = 'ACTIVE'
+      ORDER BY LAST_NAME
+      LIMIT 50
+
+  - name: "salary_by_business_unit"
+    question: "What is the average salary by business unit?"
+    sql: |
+      SELECT BUSINESS_UNIT, AVG(ANNUAL_SALARY_USD) as avg_salary, COUNT(*) as headcount
+      FROM POC_DEMO.HR.EMPLOYEES
+      WHERE STATUS = 'ACTIVE'
+      GROUP BY BUSINESS_UNIT
+      ORDER BY avg_salary DESC
+
+  - name: "engineering_employees"
+    question: "Show all employees in the Engineering business unit"
+    sql: |
+      SELECT FIRST_NAME, LAST_NAME, EMAIL, JOB_TITLE, DEPARTMENT, REGION, ANNUAL_SALARY_USD
+      FROM POC_DEMO.HR.EMPLOYEES
+      WHERE BUSINESS_UNIT = 'Engineering' AND STATUS = 'ACTIVE'
+      ORDER BY LAST_NAME

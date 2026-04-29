@@ -1,0 +1,10 @@
+.env
+keys/
+.agent_credentials.json
+.claude/
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.DS_Store
+Thumbs.db

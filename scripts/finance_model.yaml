@@ -1,0 +1,283 @@
+name: poc_finance
+description: "POC financial data - revenue by business unit, region, and product line, plus budget vs actual spending"
+
+tables:
+  - name: revenue
+    description: "Quarterly revenue data broken down by business unit, region, and product line. Includes COGS and gross margin. Rows may be filtered by business unit based on row access policy."
+    base_table:
+      database: POC_DEMO
+      schema: FINANCE
+      table: REVENUE
+
+    dimensions:
+      - name: revenue_id
+        description: "Unique revenue record identifier"
+        expr: REVENUE_ID
+        data_type: NUMBER
+        unique: true
+
+      - name: fiscal_year
+        synonyms: ["year", "FY"]
+        description: "Fiscal year (2025, 2026)"
+        expr: FISCAL_YEAR
+        data_type: NUMBER
+
+      - name: fiscal_quarter
+        synonyms: ["quarter", "QTR"]
+        description: "Fiscal quarter (Q1, Q2, Q3, Q4)"
+        expr: FISCAL_QUARTER
+        data_type: VARCHAR
+        is_enum: true
+        sample_values:
+          - "Q1"
+          - "Q2"
+          - "Q3"
+          - "Q4"
+
+      - name: business_unit
+        synonyms: ["BU", "division", "segment"]
+        description: "Business unit. Row access policy may filter rows based on the querying user's tier."
+        expr: BUSINESS_UNIT
+        data_type: VARCHAR
+        is_enum: true
+        sample_values:
+          - "Engineering"
+          - "Sales"
+          - "Finance"
+
+      - name: region
+        synonyms: ["geography", "geo", "sales region"]
+        description: "Geographic region"
+        expr: REGION
+        data_type: VARCHAR
+        is_enum: true
+        sample_values:
+          - "US-West"
+          - "US-East"
+          - "US-Central"
+
+      - name: product_line
+        synonyms: ["product", "product family", "product category"]
+        description: "Product line or service category"
+        expr: PRODUCT_LINE
+        data_type: VARCHAR
+        is_enum: true
+        sample_values:
+          - "Platform Services"
+          - "Enterprise Licenses"
+          - "Financial Services"
+
+    measures:
+      - name: revenue_usd
+        synonyms: ["revenue", "sales", "total revenue", "income"]
+        description: "Total revenue in USD"
+        expr: REVENUE_USD
+        data_type: NUMBER
+        default_aggregation: sum
+
+      - name: cogs_usd
+        synonyms: ["COGS", "cost of goods", "cost of sales"]
+        description: "Cost of goods sold in USD"
+        expr: COGS_USD
+        data_type: NUMBER
+        default_aggregation: sum
+
+      - name: gross_margin_pct
+        synonyms: ["gross margin", "margin", "GM"]
+        description: "Gross margin percentage"
+        expr: GROSS_MARGIN_PCT
+        data_type: NUMBER
+        default_aggregation: avg
+
+  - name: budgets
+    description: "Annual budget vs actual spending by business unit, department, and category. Includes variance percentage."
+    base_table:
+      database: POC_DEMO
+      schema: FINANCE
+      table: BUDGETS
+
+    dimensions:
+      - name: budget_id
+        description: "Unique budget record identifier"
+        expr: BUDGET_ID
+        data_type: NUMBER
+        unique: true
+
+      - name: fiscal_year
+        synonyms: ["year", "FY"]
+        description: "Fiscal year"
+        expr: FISCAL_YEAR
+        data_type: NUMBER
+
+      - name: business_unit
+        synonyms: ["BU", "division"]
+        description: "Business unit"
+        expr: BUSINESS_UNIT
+        data_type: VARCHAR
+        is_enum: true
+        sample_values:
+          - "Engineering"
+          - "Sales"
+          - "Finance"
+          - "HR"
+
+      - name: department
+        synonyms: ["dept", "team", "org"]
+        description: "Department within the business unit"
+        expr: DEPARTMENT
+        data_type: VARCHAR
+        is_enum: true
+        sample_values:
+          - "R&D"
+          - "Sales Ops"
+          - "Marketing"
+          - "Accounting"
+          - "HR Ops"
+          - "Security"
+
+      - name: budget_category
+        synonyms: ["category", "cost category", "spend category", "line item"]
+        description: "Budget line item category"
+        expr: BUDGET_CATEGORY
+        data_type: VARCHAR
+        is_enum: true
+        sample_values:
+          - "Personnel"
+          - "Infrastructure"
+          - "Tooling"
+          - "Travel"
+          - "Campaigns"
+          - "Audit"
+          - "Benefits"
+
+    measures:
+      - name: budgeted_usd
+        synonyms: ["budget", "planned spend", "budgeted amount"]
+        description: "Budgeted amount in USD"
+        expr: BUDGETED_USD
+        data_type: NUMBER
+        default_aggregation: sum
+
+      - name: actual_usd
+        synonyms: ["actual spend", "actual cost", "actuals"]
+        description: "Actual spend in USD"
+        expr: ACTUAL_USD
+        data_type: NUMBER
+        default_aggregation: sum
+
+      - name: variance_pct
+        synonyms: ["variance", "budget variance", "over under"]
+        description: "Variance as percentage of budget (positive = over budget)"
+        expr: VARIANCE_PCT
+        data_type: NUMBER
+        default_aggregation: avg
+
+  - name: finance_employees
+    description: "Finance view of employees with cost center assignments. Email and salary may be masked. Rows filtered by business unit."
+    base_table:
+      database: POC_DEMO
+      schema: FINANCE
+      table: EMPLOYEES
+
+    dimensions:
+      - name: employee_id
+        description: "Unique employee identifier"
+        expr: EMPLOYEE_ID
+        data_type: NUMBER
+
+      - name: full_name
+        synonyms: ["name", "employee name"]
+        description: "Employee full name"
+        expr: FULL_NAME
+        data_type: VARCHAR
+
+      - name: email
+        synonyms: ["email address", "work email"]
+        description: "Employee email. May be masked by policy."
+        expr: EMAIL
+        data_type: VARCHAR
+
+      - name: business_unit
+        synonyms: ["BU", "division"]
+        description: "Business unit"
+        expr: BUSINESS_UNIT
+        data_type: VARCHAR
+        is_enum: true
+
+      - name: region
+        synonyms: ["geography"]
+        description: "Geographic region"
+        expr: REGION
+        data_type: VARCHAR
+        is_enum: true
+
+      - name: job_title
+        synonyms: ["title", "role", "position"]
+        description: "Job title"
+        expr: JOB_TITLE
+        data_type: VARCHAR
+
+      - name: cost_center
+        synonyms: ["CC", "cost code"]
+        description: "Cost center code (e.g. CC-ENG-100)"
+        expr: COST_CENTER
+        data_type: VARCHAR
+
+    time_dimensions:
+      - name: hire_date
+        synonyms: ["start date", "date hired"]
+        description: "Date the employee was hired"
+        expr: HIRE_DATE
+        data_type: DATE
+
+    measures:
+      - name: annual_salary_usd
+        synonyms: ["salary", "compensation", "pay"]
+        description: "Annual salary in USD. May be masked by policy."
+        expr: ANNUAL_SALARY_USD
+        data_type: NUMBER
+        default_aggregation: avg
+
+verified_queries:
+  - name: "total_revenue_2025_by_bu"
+    question: "What was total revenue across all regions in 2025, broken down by business unit?"
+    sql: |
+      SELECT BUSINESS_UNIT, SUM(REVENUE_USD) as total_revenue
+      FROM POC_DEMO.FINANCE.REVENUE
+      WHERE FISCAL_YEAR = 2025
+      GROUP BY BUSINESS_UNIT
+      ORDER BY total_revenue DESC
+
+  - name: "budget_variance_rd_2026"
+    question: "Show R&D budget variance for 2026 by business unit"
+    sql: |
+      SELECT BUSINESS_UNIT, BUDGET_CATEGORY, BUDGETED_USD, ACTUAL_USD, VARIANCE_PCT
+      FROM POC_DEMO.FINANCE.BUDGETS
+      WHERE FISCAL_YEAR = 2026 AND DEPARTMENT = 'R&D'
+      ORDER BY VARIANCE_PCT DESC
+
+  - name: "revenue_by_region_2025"
+    question: "Show revenue by region for 2025"
+    sql: |
+      SELECT REGION, SUM(REVENUE_USD) as total_revenue
+      FROM POC_DEMO.FINANCE.REVENUE
+      WHERE FISCAL_YEAR = 2025
+      GROUP BY REGION
+      ORDER BY total_revenue DESC
+
+  - name: "departments_over_15pct_variance"
+    question: "Which departments are over 15% budget variance in 2026?"
+    sql: |
+      SELECT BUSINESS_UNIT, DEPARTMENT, BUDGET_CATEGORY, VARIANCE_PCT
+      FROM POC_DEMO.FINANCE.BUDGETS
+      WHERE FISCAL_YEAR = 2026 AND VARIANCE_PCT > 15
+      ORDER BY VARIANCE_PCT DESC
+
+  - name: "revenue_by_bu_quarter"
+    question: "Show revenue by business unit for each quarter in 2025"
+    sql: |
+      SELECT BUSINESS_UNIT, FISCAL_QUARTER, SUM(REVENUE_USD) as total_revenue
+      FROM POC_DEMO.FINANCE.REVENUE
+      WHERE FISCAL_YEAR = 2025
+      GROUP BY BUSINESS_UNIT, FISCAL_QUARTER
+      ORDER BY BUSINESS_UNIT, FISCAL_QUARTER

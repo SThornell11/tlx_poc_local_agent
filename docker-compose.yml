@@ -1,0 +1,66 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # GPU support (uncomment if NVIDIA GPU available):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  agent-server:
+    build:
+      context: .
+      dockerfile: services/agents/Dockerfile
+    ports:
+      - "5100:5100"
+    env_file: .env
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - FRONTEND_ORIGIN=http://localhost:5000
+    depends_on:
+      ollama:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5100/api/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 300s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: services/frontend/Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - AGENT_SERVER_URL=http://agent-server:5100
+      - AGENT_SERVER_EXTERNAL=http://localhost:5100
+      - CUSTOMER_LABEL=${CUSTOMER_LABEL:-TrustLogix POC}
+      - AUTH_IDP=${AUTH_IDP:-entra}
+    depends_on:
+      agent-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  ollama_data:

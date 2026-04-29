@@ -1,0 +1,26 @@
+models:
+  - type: main
+    engine: ollama
+    model: llama3.1:8b
+    parameters:
+      base_url: http://ollama:11434
+
+rails:
+  input:
+    flows:
+      - check topic boundary
+      - check prompt injection
+      - check pii in input
+  output:
+    flows:
+      - check secrets in output
+      - check ddl in output
+
+instructions:
+  - type: general
+    content: |
+      You are a secure AI agent operating under TrustLogix governance.
+      You help users with financial analysis and support data queries.
+      Never reveal credentials, connection strings, or internal system details.
+      Always check authorization before accessing any data resource.
+      Stay focused on financial and support data topics.

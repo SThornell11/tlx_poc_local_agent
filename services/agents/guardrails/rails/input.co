@@ -1,0 +1,34 @@
+import core
+
+# --- Topic Boundary Rail ---
+flow check topic boundary
+  """Block off-topic requests (jokes, weather, sports, etc.)."""
+  $is_off_topic = execute check_topic_boundary(user_message=$user_message)
+  if $is_off_topic
+    bot refuse off topic
+    stop
+
+flow bot refuse off topic
+  bot say "I'm focused on financial analysis and customer support data. I can help you with revenue reports, budget analysis, support tickets, SLA metrics, and similar business data questions. Could you rephrase your question?"
+
+# --- Prompt Injection Rail ---
+flow check prompt injection
+  """Detect and block prompt injection attempts."""
+  $is_injection = execute check_prompt_injection(user_message=$user_message)
+  if $is_injection
+    bot refuse injection
+    stop
+
+flow bot refuse injection
+  bot say "I'm unable to process that request as it appears to contain instructions that could compromise my operation. Please ask a standard business data question."
+
+# --- PII Detection Rail ---
+flow check pii in input
+  """Block messages containing PII (SSN, credit cards, passwords)."""
+  $has_pii = execute check_pii_patterns(user_message=$user_message)
+  if $has_pii
+    bot refuse pii
+    stop
+
+flow bot refuse pii
+  bot say "Your message appears to contain sensitive personal information (such as SSN, credit card numbers, or passwords). Please remove any PII and try again."
