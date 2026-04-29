@@ -1,18 +1,27 @@
 -- =============================================================================
--- TrustLogix POC — Snowflake setup script
+-- TrustLogix POC — Snowflake setup script (OPTIONAL)
 -- Run as ACCOUNTADMIN in a Snowflake worksheet.
 --
--- This script provisions a self-contained "POC_DEMO" database with sample HR,
--- Finance, and Engineering data plus a Cortex Agent and a Managed MCP Server.
--- The TrustLogix MCP gateway will sit in front of POC_MCP_SERVER and enforce
--- access policies on every request.
+-- This script is OPTIONAL. The TrustLogix POC agent works with ANY MCP server
+-- behind your TLX gateway. Use this script only if you want a self-contained
+-- demo dataset to point your gateway at while evaluating the agent.
+--
+-- It provisions a "POC_DEMO" database with sample HR, Finance, and Engineering
+-- data plus a Cortex Agent and a Managed MCP Server (POC_MCP_SERVER) that the
+-- TLX gateway sits in front of.
+--
+-- IMPORTANT: This script does NOT create any masking policies or row-access
+-- policies. Those are authored in TrustLogix TrustAccess and pushed down to
+-- Snowflake by your TrustLogix admin once the database and roles below are
+-- registered. The roles, grants, and tables here are the substrate; the
+-- policy layer lives in TrustLogix.
 --
 -- Default object names (rename here + in the two YAML files if you prefer
 -- different conventions — keep them consistent with TLX_GW_SERVICE_ROLE in
 -- your .env):
 --   POC_DEMO_WH        warehouse
 --   POC_DEMO           database
---   POC_TIER1/2/3_ROLE access tier roles for masking/row-access demos
+--   POC_TIER1/2/3_ROLE roles TrustLogix will attach masking/row-access policies to
 --   POC_GW_SVC         service account the TLX gateway authenticates as
 --   POC_MCP_SERVER     managed MCP server the gateway proxies
 --   POC_CORTEX_AGENT   Cortex Agent invoked by the MCP tool
@@ -44,11 +53,14 @@ CREATE SCHEMA IF NOT EXISTS CORTEX_OBJECTS;
 
 -- ─── 3. Roles ───────────────────────────────────────────────────────────────
 
--- Tier 1: Full access — data scientist / AI lead
+-- Tier roles. The roles themselves grant only USAGE/SELECT on schemas and
+-- tables — see "Table Grants" below. Masking and row-access policies are
+-- attached to these roles by TrustLogix TrustAccess, NOT by this script.
+-- The "tier" labels just describe what TrustLogix will use them for once
+-- policies are pushed down (e.g. Tier 1 = full visibility, Tier 3 = heavy
+-- masking + row filtering).
 CREATE ROLE IF NOT EXISTS POC_TIER1_ROLE;
--- Tier 2: Partial masking, BU-restricted — engineer / Copilot Studio
 CREATE ROLE IF NOT EXISTS POC_TIER2_ROLE;
--- Tier 3: Heavy masking, region-restricted, no engineering — consumer / read-only
 CREATE ROLE IF NOT EXISTS POC_TIER3_ROLE;
 -- Admin role for managing demo objects
 CREATE ROLE IF NOT EXISTS POC_ADMIN_ROLE;
@@ -410,7 +422,9 @@ FROM VALUES
 WHERE NOT EXISTS (SELECT 1 FROM DOCUMENTS LIMIT 1);
 
 -- ─── 11. Row Access & Masking Policies ──────────────────────────────────────
--- SKIPPED — will be pushed from TrustLogix.
+-- INTENTIONALLY EMPTY. All masking and row-access policies are created in
+-- TrustLogix TrustAccess and pushed down to Snowflake. Do not add policy
+-- DDL here — it would fight the policies that TrustLogix manages.
 
 -- ─── 12. Table Grants ──────────────────────────────────────────────────────
 
@@ -637,7 +651,8 @@ SHOW MCP SERVERS IN SCHEMA POC_DEMO.CORTEX_OBJECTS;
 SHOW AGENTS IN SCHEMA POC_DEMO.CORTEX_OBJECTS;
 SHOW CORTEX SEARCH SERVICES IN SCHEMA POC_DEMO.CORTEX_OBJECTS;
 
--- Tier-by-tier masking sanity check (run each block separately):
+-- Tier-by-tier masking sanity check (run each block separately AFTER your
+-- TrustLogix admin has pushed down the masking and row-access policies):
 --   USE ROLE POC_TIER1_ROLE;
 --   SELECT FIRST_NAME, LAST_NAME, EMAIL, SSN, ANNUAL_SALARY_USD FROM POC_DEMO.HR.EMPLOYEES LIMIT 5;
 --   USE ROLE POC_TIER2_ROLE;
@@ -645,6 +660,6 @@ SHOW CORTEX SEARCH SERVICES IN SCHEMA POC_DEMO.CORTEX_OBJECTS;
 --   USE ROLE POC_TIER3_ROLE;
 --   SELECT FIRST_NAME, LAST_NAME, EMAIL, SSN, ANNUAL_SALARY_USD FROM POC_DEMO.HR.EMPLOYEES LIMIT 5;
 --
--- Note: Row access and masking policies are pushed from TrustLogix on a live
--- POC, so tier 1/2/3 differences only appear after policies are deployed. Use
--- the gateway's UI to manage these rather than creating them here.
+-- Until policies are pushed from TrustLogix, all three tiers see the same
+-- raw data — that's expected. The masking/row-access enforcement only
+-- appears after TrustLogix attaches the policies to these roles.
